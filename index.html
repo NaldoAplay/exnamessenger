@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EXNA Messenger | NaldoA</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        :root {
+            --preto: #0b141a;
+            --preto-light: #111b21;
+            --esmeralda: linear-gradient(135deg, #00a884 0%, #005c4b 100%);
+            --dourado: linear-gradient(to bottom, #cfad56, #f9e29c, #b99331);
+            --branco: #e9edef;
+            --cinza: #8696a0;
+            --verde-zap: #056162;
+        }
+
+        /* BARRA LATERAL PRETA */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--preto); }
+        ::-webkit-scrollbar-thumb { background: #00a884; border-radius: 10px; }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background: var(--preto); color: var(--branco); height: 100vh; overflow: hidden; }
+
+        .screen { display: none; height: 100vh; flex-direction: column; width: 100%; }
+        .screen.active { display: flex; }
+
+        /* TELA ENTRADA */
+        .auth-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 20px; }
+        .logo-exna { font-size: 4.5rem; letter-spacing: -3px; }
+        .logo-exna span { background: var(--dourado); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900; }
+        
+        .pfp-selector { width: 130px; height: 130px; border-radius: 50%; border: 3px solid #cfad56; margin-bottom: 20px; position: relative; cursor: pointer; overflow: hidden; background: #202c33; }
+        .pfp-selector img { width: 100%; height: 100%; object-fit: cover; }
+
+        #name-input { background: var(--preto-light); border: 1px solid #30363d; padding: 15px; border-radius: 10px; color: white; width: 300px; margin-bottom: 10px; outline: none; text-align: center; }
+        #btn-entrar { background: var(--esmeralda); border: none; padding: 15px; border-radius: 30px; color: white; font-weight: bold; cursor: pointer; width: 300px; }
+
+        /* APP HEADER */
+        .app-header { background: #202c33; padding-top: 10px; border-bottom: 1px solid #333; }
+        .top-nav { display: flex; justify-content: space-between; padding: 10px 15px; align-items: center; }
+        .tabs { display: flex; }
+        .tab-btn { flex: 1; text-align: center; padding: 15px 0; color: var(--cinza); font-weight: bold; cursor: pointer; font-size: 0.8rem; border-bottom: 3px solid transparent; }
+        .tab-btn.active { color: #00a884; border-bottom-color: #00a884; }
+
+        /* LISTA */
+        .chat-row { display: flex; padding: 15px; border-bottom: 1px solid #222d34; align-items: center; cursor: pointer; position: relative; }
+        .pfp-thumb { width: 55px; height: 55px; border-radius: 50%; background: #2a3942; border: 1px solid #cfad56; margin-right: 15px; overflow: hidden; }
+        .pfp-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+        .unread-badge { position: absolute; right: 20px; background: #00a884; color: white; min-width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold; }
+
+        /* CHAT WINDOW */
+        #chat-window { flex: 1; overflow-y: auto; padding: 20px; background-color: #0b141a; display: flex; flex-direction: column; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-blend-mode: overlay; }
+        .msg { padding: 10px; border-radius: 10px; margin-bottom: 10px; max-width: 80%; font-size: 0.95rem; line-height: 1.3; }
+        .sent { background: var(--verde-zap); align-self: flex-end; }
+        .received { background: #202c33; align-self: flex-start; }
+
+        .big-emoji { font-size: 3.5rem; background: transparent !important; border: none !important; }
+
+        /* AUDIO */
+        audio { height: 38px; width: 220px; filter: invert(100%) hue-rotate(180deg) brightness(1.5); margin-top: 5px; }
+
+        .input-bar { background: #202c33; padding: 10px; display: flex; gap: 12px; align-items: center; }
+        .input-bar input { flex: 1; background: #2a3942; border: none; padding: 12px 20px; border-radius: 25px; color: white; outline: none; }
+        .action-btn { background: var(--esmeralda); border: none; width: 48px; height: 48px; border-radius: 50%; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; }
+        .mic-active { background: #ff3b30 !important; animation: pulse 1s infinite; }
+
+        @keyframes pulse { 0% { scale: 1; } 50% { scale: 1.1; } 100% { scale: 1; } }
+
+        .fab { position: fixed; bottom: 40px; right: 25px; width: 65px; height: 65px; background: var(--esmeralda); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; box-shadow: 0 5px 15px black; cursor: pointer; }
+        footer { text-align: center; padding: 12px; font-size: 0.75rem; color: var(--cinza); border-top: 1px solid #222d34; }
+    </style>
+</head>
+<body>
+
+    <div id="screen-auth" class="screen active">
+        <div class="auth-container">
+            <h1 class="logo-exna">E<span>X</span>NA</h1>
+            <p style="color:#00a884; font-weight:bold; letter-spacing:3px;">MESSENGER</p>
+            <div class="pfp-selector" onclick="document.getElementById('file-pfp').click()">
+                <img id="pfp-img-reg" src="https://cdn-icons-png.flaticon.com/512/149/149071.png">
+                <input type="file" id="file-pfp" hidden accept="image/*">
+            </div>
+            <input type="text" id="name-input" placeholder="Digite seu nome...">
+            <button id="btn-entrar" onclick="fazerLogin()">ENTRAR NO EXNA</button>
+            <footer style="margin-top:20px; border:none;">Desenvolvido por NaldoA</footer>
+        </div>
+    </div>
+
+    <div id="screen-app" class="screen">
+        <header class="app-header">
+            <div class="top-nav">
+                <div class="logo-exna" style="font-size:1.6rem;">E<span>X</span>NA</div>
+                <div id="p2p-status" style="font-size: 0.7rem; color: #00a884;">Conectando...</div>
+            </div>
+            <nav class="tabs">
+                <div class="tab-btn active" onclick="switchTab('chats', this)">CONVERSAS</div>
+                <div class="tab-btn" onclick="switchTab('groups', this)">GRUPOS</div>
+                <div class="tab-btn" onclick="switchTab('settings', this)">AJUSTES</div>
+            </nav>
+        </header>
+        <main id="tab-content" style="flex:1; overflow-y:auto;">
+            <div id="view-chats" style="display:block;"></div>
+            <div id="view-groups" style="display:none; padding: 20px; text-align: center; color: var(--cinza);">Grupos P2P em breve.</div>
+            <div id="view-settings" style="display:none; padding:30px; text-align:center;">
+                <div class="pfp-selector" style="margin: 0 auto 15px;" onclick="document.getElementById('change-pfp').click()">
+                    <img id="set-pfp-img" src="">
+                    <input type="file" id="change-pfp" hidden accept="image/*" onchange="updateMyPFP(this)">
+                </div>
+                <h2 id="set-name-txt" contenteditable="true" onblur="updateMyName(this.innerText)"></h2>
+                <p id="set-id-txt" style="color:#00a884; font-family:monospace; margin-top:10px; cursor:pointer;" onclick="copyID()"></p>
+                <button onclick="logout()" style="margin-top:30px; color:red; background:none; border:1px solid red; padding:10px 20px; border-radius:8px; cursor:pointer;">DELETAR CONTA</button>
+            </div>
+        </main>
+        <div class="fab" onclick="adicionarContato()">+</div>
+        <footer>EXNA Messenger &copy; | 2026 - Desenvolvido por NaldoA</footer>
+    </div>
+
+    <div id="screen-chat" class="screen">
+        <header style="background:#202c33; padding:10px; display:flex; align-items:center; gap:12px;">
+            <button onclick="fecharChat()" style="background:none; border:none; color:white; font-size: 1.8rem;">←</button>
+            <div class="pfp-thumb" id="chat-header-pfp" style="width:45px; height:45px;"></div>
+            <span id="chat-target-name" style="font-weight:bold; flex: 1; font-size: 1.1rem;">Nome</span>
+            <button onclick="iniciarChamada()" style="background:none; border:none; color:white; font-size: 1.3rem;">📞</button>
+        </header>
+        <div id="chat-window"></div>
+        <div class="input-bar">
+            <input type="text" id="msg-input" placeholder="Mensagem segura...">
+            <button class="action-btn" id="btn-mic" onmousedown="startRec()" onmouseup="stopRec()" ontouchstart="startRec()" ontouchend="stopRec()">🎤</button>
+            <button class="action-btn" onclick="enviarMensagem()">➔</button>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null, contatos = [], peer = null, activeConn = null, chatAtivoIndex = null;
+        let mediaRecorder, audioChunks = [];
+        
+        // SOM DE NOTIFICAÇÃO (TLIN!)
+        const notifySound = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
+
+        window.onload = () => {
+            const data = localStorage.getItem("EXNA_V4");
+            if(data) {
+                currentUser = JSON.parse(data);
+                contatos = JSON.parse(localStorage.getItem("EXNA_CONTATOS") || "[]");
+                entrar();
+            }
+        };
+
+        // LOGIN E FOTO
+        document.getElementById('file-pfp').onchange = (e) => {
+            const reader = new FileReader();
+            reader.onload = (ev) => document.getElementById('pfp-img-reg').src = ev.target.result;
+            reader.readAsDataURL(e.target.files[0]);
+        };
+
+        function fazerLogin() {
+            const nome = document.getElementById('name-input').value;
+            if(!nome) return alert("Digite seu nome!");
+            currentUser = { name: nome, pfp: document.getElementById('pfp-img-reg').src, id: "EXNA-" + Math.floor(1000 + Math.random() * 9000) };
+            localStorage.setItem("EXNA_V4", JSON.stringify(currentUser));
+            entrar();
+        }
+
+        function entrar() {
+            document.getElementById('screen-auth').classList.remove('active');
+            document.getElementById('screen-app').classList.add('active');
+            initP2P();
+            renderConversas();
+        }
+
+        function initP2P() {
+            peer = new Peer(currentUser.id);
+            peer.on('open', id => document.getElementById('p2p-status').innerText = "Online: " + id);
+            peer.on('connection', (conn) => { activeConn = conn; setupConn(conn); });
+            peer.on('call', (call) => {
+                if(confirm("Chamada EXNA recebida! Atender?")) {
+                    navigator.mediaDevices.getUserMedia({audio: true}).then(stream => {
+                        call.answer(stream);
+                        call.on('stream', remoteStream => { const a = new Audio(); a.srcObject = remoteStream; a.play(); });
+                    });
+                }
+            });
+        }
+
+        function setupConn(conn) {
+            conn.on('open', () => {
+                conn.send({ type: 'identidade', nome: currentUser.name, pfp: currentUser.pfp });
+            });
+            conn.on('data', (data) => {
+                if(data.type === 'identidade') atualizarInfoAmigo(conn.peer, data.nome, data.pfp);
+                else if(data.type === 'msg' || data.type === 'audio') receberDados(conn.peer, data);
+            });
+        }
+
+        function enviarMensagem() {
+            const input = document.getElementById('msg-input');
+            if(!input.value || !activeConn) return;
+            const msgData = { type: 'msg', text: input.value, format: 'text' };
+            activeConn.send(msgData);
+            pushMsg({ ...msgData, type: 'sent' });
+            input.value = "";
+        }
+
+        function receberDados(peerID, data) {
+            let idx = contatos.findIndex(c => c.peerID === peerID);
+            if(idx !== -1) {
+                contatos[idx].msgs.push({ ...data, type: 'received' });
+                localStorage.setItem("EXNA_CONTATOS", JSON.stringify(contatos));
+                
+                // NOTIFICAÇÃO REAL
+                if(chatAtivoIndex !== idx) {
+                    notifySound.play(); // Toca som
+                    if (navigator.vibrate) navigator.vibrate(200); // Vibra
+                    document.title = "(1) Nova Mensagem EXNA";
+                    renderConversas(); // Atualiza a lista para mostrar que chegou algo
+                } else {
+                    renderMensagens();
+                }
+            }
+            // Dentro do peer.on('data', (data) => { ... })
+if(data.type === 'confirmacao_leitura') {
+    marcarComoLido(data.msgId);
+}
+
+// Nova função para o luxo das barrinhas
+function marcarComoLido(msgId) {
+    const msgObj = contatos[chatAtivoIndex].msgs.find(m => m.id === msgId);
+    if(msgObj) {
+        msgObj.lido = true;
+        renderMensagens();
+    }
+}
+        }
+
+        function pushMsg(msgObj) {
+            contatos[chatAtivoIndex].msgs.push(msgObj);
+            localStorage.setItem("EXNA_CONTATOS", JSON.stringify(contatos));
+            renderMensagens();
+        }
+
+        function renderMensagens() {
+            const win = document.getElementById('chat-window');
+            win.innerHTML = "";
+            contatos[chatAtivoIndex].msgs.forEach(m => {
+                const div = document.createElement('div');
+                div.className = `msg ${m.type}`;
+                if(m.format === 'text') {
+                    div.innerText = m.text;
+                    if(isEmojiOnly(m.text)) div.classList.add('big-emoji');
+                } else {
+                    const audio = document.createElement('audio');
+                    audio.src = m.data; audio.controls = true;
+                    div.appendChild(audio);
+                }
+                win.appendChild(div);
+            });
+            win.scrollTop = win.scrollHeight;
+            document.title = "EXNA Messenger | NaldoA"; // Reseta título quando lê
+        }
+
+        function isEmojiOnly(str) {
+            const regex = /^(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])+$/g;
+            return regex.test(str.trim());
+        }
+
+        // --- ÁUDIO REAL ---
+        async function startRec() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                document.getElementById('btn-mic').classList.add('mic-active');
+                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                mediaRecorder.onstop = () => {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(new Blob(audioChunks));
+                    reader.onloadend = () => {
+                        const base64 = reader.result;
+                        if(activeConn) activeConn.send({ type: 'audio', data: base64, format: 'audio' });
+                        pushMsg({ data: base64, type: 'sent', format: 'audio' });
+                    };
+                };
+                mediaRecorder.start();
+            } catch (err) { alert("Ative o microfone!"); }
+        }
+        function stopRec() { if(mediaRecorder) { mediaRecorder.stop(); document.getElementById('btn-mic').classList.remove('mic-active'); } }
+
+        // --- EDIÇÃO DE PERFIL ---
+        function updateMyName(nome) {
+            currentUser.name = nome;
+            localStorage.setItem("EXNA_V4", JSON.stringify(currentUser));
+            if(activeConn) activeConn.send({ type: 'identidade', nome: currentUser.name, pfp: currentUser.pfp });
+        }
+
+        function updateMyPFP(input) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                currentUser.pfp = e.target.result;
+                document.getElementById('set-pfp-img').src = e.target.result;
+                localStorage.setItem("EXNA_V4", JSON.stringify(currentUser));
+                if(activeConn) activeConn.send({ type: 'identidade', nome: currentUser.name, pfp: currentUser.pfp });
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+
+        function iniciarChamada() {
+            if(!activeConn) return;
+            navigator.mediaDevices.getUserMedia({audio: true}).then(stream => {
+                const call = peer.call(activeConn.peer, stream);
+                alert("Chamando ID: " + activeConn.peer);
+            });
+        }
+
+        function switchTab(t, el) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
+            ['view-chats', 'view-groups', 'view-settings'].forEach(v => document.getElementById(v).style.display = 'none');
+            document.getElementById('view-' + t).style.display = 'block';
+            if(t === 'settings') {
+                document.getElementById('set-name-txt').innerText = currentUser.name;
+                document.getElementById('set-id-txt').innerText = currentUser.id;
+                document.getElementById('set-pfp-img').src = currentUser.pfp;
+            }
+        }
+
+        function renderConversas() {
+            const v = document.getElementById('view-chats'); v.innerHTML = "";
+            contatos.forEach((c, i) => {
+                v.innerHTML += `<div class="chat-row" onclick="abrirChat(${i})">
+                    <div class="pfp-thumb">${c.pfp ? `<img src="${c.pfp}">` : ''}</div>
+                    <div style="flex:1"><strong>${c.nome}</strong><br><small>${c.peerID}</small></div>
+                </div>`;
+            });
+        }
+
+        function abrirChat(i) {
+            chatAtivoIndex = i;
+            const c = contatos[i];
+            document.getElementById('chat-target-name').innerText = c.nome;
+            document.getElementById('chat-header-pfp').innerHTML = c.pfp ? `<img src="${c.pfp}">` : '';
+            document.getElementById('screen-app').classList.remove('active');
+            document.getElementById('screen-chat').classList.add('active');
+            if(!activeConn || activeConn.peer !== c.peerID) { activeConn = peer.connect(c.peerID); setupConn(activeConn); }
+            renderMensagens();
+        }
+
+        function fecharChat() { document.getElementById('screen-chat').classList.remove('active'); document.getElementById('screen-app').classList.add('active'); }
+        function logout() { localStorage.clear(); location.reload(); }
+        function copyID() { navigator.clipboard.writeText(currentUser.id); alert("ID Copiado!"); }
+        function adicionarContato() {
+            const id = prompt("ID EXNA do amigo:");
+            if(id) {
+                if(!contatos.find(c => c.peerID === id)) {
+                    contatos.push({ nome: "Conectando...", pfp: '', peerID: id, msgs: [] });
+                    localStorage.setItem("EXNA_CONTATOS", JSON.stringify(contatos));
+                }
+                renderConversas();
+            }
+        }
+        function atualizarInfoAmigo(peerID, nome, pfp) {
+            let idx = contatos.findIndex(c => c.peerID === peerID);
+            if(idx !== -1) { contatos[idx].nome = nome; contatos[idx].pfp = pfp; }
+            localStorage.setItem("EXNA_CONTATOS", JSON.stringify(contatos));
+            renderConversas();
+        }
+    </script>
+</body>
+</html>
