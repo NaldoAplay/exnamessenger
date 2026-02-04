@@ -135,238 +135,273 @@
     </div>
 
     <script>
-        let currentUser = null, contatos = [], peer = null, activeConn = null, chatAtivoIndex = null;
-        let mediaRecorder, audioChunks = [];
-        
-        // SOM DE NOTIFICAÇÃO (TLIN!)
-        const notifySound = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
+    let currentUser = null, contatos = [], peer = null, activeConn = null, chatAtivoIndex = null;
+    let mediaRecorder, audioChunks = [];
+    
+    // SOM DE NOTIFICAÇÃO (TLIN!)
+    const notifySound = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
 
-        window.onload = () => {
-            const data = localStorage.getItem("EXNA_V4");
-            if(data) {
-                currentUser = JSON.parse(data);
-                contatos = JSON.parse(localStorage.getItem("EXNA_CONTATOS") || "[]");
-                entrar();
-            }
+    // --- FUNÇÃO DE COMPRESSÃO ADICIONADA (PARA ACEITAR FOTOS PESADAS) ---
+    function processarFotoResiliente(file, callback) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 600; 
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_WIDTH) {
+                        width *= MAX_WIDTH / height;
+                        height = MAX_WIDTH;
+                    }
+                }
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                // Gera um JPEG leve para não travar o banco
+                callback(canvas.toDataURL('image/jpeg', 0.7));
+            };
+            img.src = e.target.result;
         };
+        reader.readAsDataURL(file);
+    }
 
-        // LOGIN E FOTO
-        document.getElementById('file-pfp').onchange = (e) => {
-            const reader = new FileReader();
-            reader.onload = (ev) => document.getElementById('pfp-img-reg').src = ev.target.result;
-            reader.readAsDataURL(e.target.files[0]);
-        };
-
-        function fazerLogin() {
-            const nome = document.getElementById('name-input').value;
-            if(!nome) return alert("Digite seu nome!");
-            currentUser = { name: nome, pfp: document.getElementById('pfp-img-reg').src, id: "EXNA-" + Math.floor(1000 + Math.random() * 9000) };
-            localStorage.setItem("EXNA_V4", JSON.stringify(currentUser));
+    window.onload = () => {
+        const data = localStorage.getItem("EXNA_V4");
+        if(data) {
+            currentUser = JSON.parse(data);
+            contatos = JSON.parse(localStorage.getItem("EXNA_CONTATOS") || "[]");
             entrar();
         }
+    };
 
-        function entrar() {
-            document.getElementById('screen-auth').classList.remove('active');
-            document.getElementById('screen-app').classList.add('active');
-            initP2P();
-            renderConversas();
-        }
-
-        function initP2P() {
-            peer = new Peer(currentUser.id);
-            peer.on('open', id => document.getElementById('p2p-status').innerText = "Online: " + id);
-            peer.on('connection', (conn) => { activeConn = conn; setupConn(conn); });
-            peer.on('call', (call) => {
-                if(confirm("Chamada EXNA recebida! Atender?")) {
-                    navigator.mediaDevices.getUserMedia({audio: true}).then(stream => {
-                        call.answer(stream);
-                        call.on('stream', remoteStream => { const a = new Audio(); a.srcObject = remoteStream; a.play(); });
-                    });
-                }
+    // LOGIN E FOTO (ATUALIZADO COM COMPRESSÃO)
+    document.getElementById('file-pfp').onchange = (e) => {
+        if (e.target.files[0]) {
+            processarFotoResiliente(e.target.files[0], (foto) => {
+                document.getElementById('pfp-img-reg').src = foto;
             });
         }
+    };
 
-        function setupConn(conn) {
-            conn.on('open', () => {
-                conn.send({ type: 'identidade', nome: currentUser.name, pfp: currentUser.pfp });
-            });
-            conn.on('data', (data) => {
-                if(data.type === 'identidade') atualizarInfoAmigo(conn.peer, data.nome, data.pfp);
-                else if(data.type === 'msg' || data.type === 'audio') receberDados(conn.peer, data);
-            });
-        }
+    function fazerLogin() {
+        const nome = document.getElementById('name-input').value;
+        if(!nome) return alert("Digite seu nome!");
+        currentUser = { name: nome, pfp: document.getElementById('pfp-img-reg').src, id: "EXNA-" + Math.floor(1000 + Math.random() * 9000) };
+        localStorage.setItem("EXNA_V4", JSON.stringify(currentUser));
+        entrar();
+    }
 
-        function enviarMensagem() {
-            const input = document.getElementById('msg-input');
-            if(!input.value || !activeConn) return;
-            const msgData = { type: 'msg', text: input.value, format: 'text' };
-            activeConn.send(msgData);
-            pushMsg({ ...msgData, type: 'sent' });
-            input.value = "";
-        }
+    function entrar() {
+        document.getElementById('screen-auth').classList.remove('active');
+        document.getElementById('screen-app').classList.add('active');
+        initP2P();
+        renderConversas();
+    }
 
-        function receberDados(peerID, data) {
-            let idx = contatos.findIndex(c => c.peerID === peerID);
-            if(idx !== -1) {
-                contatos[idx].msgs.push({ ...data, type: 'received' });
-                localStorage.setItem("EXNA_CONTATOS", JSON.stringify(contatos));
-                
-                // NOTIFICAÇÃO REAL
-                if(chatAtivoIndex !== idx) {
-                    notifySound.play(); // Toca som
-                    if (navigator.vibrate) navigator.vibrate(200); // Vibra
-                    document.title = "(1) Nova Mensagem EXNA";
-                    renderConversas(); // Atualiza a lista para mostrar que chegou algo
-                } else {
-                    renderMensagens();
-                }
+    function initP2P() {
+        peer = new Peer(currentUser.id);
+        peer.on('open', id => document.getElementById('p2p-status').innerText = "Online: " + id);
+        peer.on('connection', (conn) => { activeConn = conn; setupConn(conn); });
+        peer.on('call', (call) => {
+            if(confirm("Chamada EXNA recebida! Atender?")) {
+                navigator.mediaDevices.getUserMedia({audio: true}).then(stream => {
+                    call.answer(stream);
+                    call.on('stream', remoteStream => { const a = new Audio(); a.srcObject = remoteStream; a.play(); });
+                });
             }
-            // Dentro do peer.on('data', (data) => { ... })
-if(data.type === 'confirmacao_leitura') {
-    marcarComoLido(data.msgId);
-}
+        });
+    }
 
-// Nova função para o luxo das barrinhas
-function marcarComoLido(msgId) {
-    const msgObj = contatos[chatAtivoIndex].msgs.find(m => m.id === msgId);
-    if(msgObj) {
-        msgObj.lido = true;
+    function setupConn(conn) {
+        conn.on('open', () => {
+            conn.send({ type: 'identidade', nome: currentUser.name, pfp: currentUser.pfp });
+        });
+        conn.on('data', (data) => {
+            if(data.type === 'identidade') atualizarInfoAmigo(conn.peer, data.nome, data.pfp);
+            else if(data.type === 'msg' || data.type === 'audio') receberDados(conn.peer, data);
+        });
+    }
+
+    function enviarMensagem() {
+        const input = document.getElementById('msg-input');
+        if(!input.value || !activeConn) return;
+        const msgData = { type: 'msg', text: input.value, format: 'text' };
+        activeConn.send(msgData);
+        pushMsg({ ...msgData, type: 'sent' });
+        input.value = "";
+    }
+
+    function receberDados(peerID, data) {
+        let idx = contatos.findIndex(c => c.peerID === peerID);
+        if(idx !== -1) {
+            contatos[idx].msgs.push({ ...data, type: 'received' });
+            localStorage.setItem("EXNA_CONTATOS", JSON.stringify(contatos));
+            
+            if(chatAtivoIndex !== idx) {
+                notifySound.play(); 
+                if (navigator.vibrate) navigator.vibrate(200); 
+                document.title = "(1) Nova Mensagem EXNA";
+                renderConversas(); 
+            } else {
+                renderMensagens();
+            }
+        }
+        if(data.type === 'confirmacao_leitura') {
+            marcarComoLido(data.msgId);
+        }
+    }
+
+    function marcarComoLido(msgId) {
+        const msgObj = contatos[chatAtivoIndex].msgs.find(m => m.id === msgId);
+        if(msgObj) {
+            msgObj.lido = true;
+            renderMensagens();
+        }
+    }
+
+    function pushMsg(msgObj) {
+        contatos[chatAtivoIndex].msgs.push(msgObj);
+        localStorage.setItem("EXNA_CONTATOS", JSON.stringify(contatos));
         renderMensagens();
     }
-}
-        }
 
-        function pushMsg(msgObj) {
-            contatos[chatAtivoIndex].msgs.push(msgObj);
-            localStorage.setItem("EXNA_CONTATOS", JSON.stringify(contatos));
-            renderMensagens();
-        }
+    function renderMensagens() {
+        const win = document.getElementById('chat-window');
+        win.innerHTML = "";
+        contatos[chatAtivoIndex].msgs.forEach(m => {
+            const div = document.createElement('div');
+            div.className = `msg ${m.type}`;
+            if(m.format === 'text') {
+                div.innerText = m.text;
+                if(isEmojiOnly(m.text)) div.classList.add('big-emoji');
+            } else {
+                const audio = document.createElement('audio');
+                audio.src = m.data; audio.controls = true;
+                div.appendChild(audio);
+            }
+            win.appendChild(div);
+        });
+        win.scrollTop = win.scrollHeight;
+        document.title = "EXNA Messenger | NaldoA"; 
+    }
 
-        function renderMensagens() {
-            const win = document.getElementById('chat-window');
-            win.innerHTML = "";
-            contatos[chatAtivoIndex].msgs.forEach(m => {
-                const div = document.createElement('div');
-                div.className = `msg ${m.type}`;
-                if(m.format === 'text') {
-                    div.innerText = m.text;
-                    if(isEmojiOnly(m.text)) div.classList.add('big-emoji');
-                } else {
-                    const audio = document.createElement('audio');
-                    audio.src = m.data; audio.controls = true;
-                    div.appendChild(audio);
-                }
-                win.appendChild(div);
-            });
-            win.scrollTop = win.scrollHeight;
-            document.title = "EXNA Messenger | NaldoA"; // Reseta título quando lê
-        }
+    function isEmojiOnly(str) {
+        const regex = /^(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])+$/g;
+        return regex.test(str.trim());
+    }
 
-        function isEmojiOnly(str) {
-            const regex = /^(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])+$/g;
-            return regex.test(str.trim());
-        }
-
-        // --- ÁUDIO REAL ---
-        async function startRec() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
-                audioChunks = [];
-                document.getElementById('btn-mic').classList.add('mic-active');
-                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-                mediaRecorder.onstop = () => {
-                    const reader = new FileReader();
-                    reader.readAsDataURL(new Blob(audioChunks));
-                    reader.onloadend = () => {
-                        const base64 = reader.result;
-                        if(activeConn) activeConn.send({ type: 'audio', data: base64, format: 'audio' });
-                        pushMsg({ data: base64, type: 'sent', format: 'audio' });
-                    };
+    async function startRec() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+            document.getElementById('btn-mic').classList.add('mic-active');
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+            mediaRecorder.onstop = () => {
+                const reader = new FileReader();
+                reader.readAsDataURL(new Blob(audioChunks));
+                reader.onloadend = () => {
+                    const base64 = reader.result;
+                    if(activeConn) activeConn.send({ type: 'audio', data: base64, format: 'audio' });
+                    pushMsg({ data: base64, type: 'sent', format: 'audio' });
                 };
-                mediaRecorder.start();
-            } catch (err) { alert("Ative o microfone!"); }
-        }
-        function stopRec() { if(mediaRecorder) { mediaRecorder.stop(); document.getElementById('btn-mic').classList.remove('mic-active'); } }
+            };
+            mediaRecorder.start();
+        } catch (err) { alert("Ative o microfone!"); }
+    }
 
-        // --- EDIÇÃO DE PERFIL ---
-        function updateMyName(nome) {
-            currentUser.name = nome;
-            localStorage.setItem("EXNA_V4", JSON.stringify(currentUser));
-            if(activeConn) activeConn.send({ type: 'identidade', nome: currentUser.name, pfp: currentUser.pfp });
-        }
+    function stopRec() { if(mediaRecorder) { mediaRecorder.stop(); document.getElementById('btn-mic').classList.remove('mic-active'); } }
 
-        function updateMyPFP(input) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                currentUser.pfp = e.target.result;
-                document.getElementById('set-pfp-img').src = e.target.result;
+    function updateMyName(nome) {
+        currentUser.name = nome;
+        localStorage.setItem("EXNA_V4", JSON.stringify(currentUser));
+        if(activeConn) activeConn.send({ type: 'identidade', nome: currentUser.name, pfp: currentUser.pfp });
+    }
+
+    // EDIÇÃO DE FOTO (ATUALIZADO COM COMPRESSÃO)
+    function updateMyPFP(input) {
+        if (input.files[0]) {
+            processarFotoResiliente(input.files[0], (fotoComprimida) => {
+                currentUser.pfp = fotoComprimida;
+                document.getElementById('set-pfp-img').src = fotoComprimida;
                 localStorage.setItem("EXNA_V4", JSON.stringify(currentUser));
                 if(activeConn) activeConn.send({ type: 'identidade', nome: currentUser.name, pfp: currentUser.pfp });
-            };
-            reader.readAsDataURL(input.files[0]);
-        }
-
-        function iniciarChamada() {
-            if(!activeConn) return;
-            navigator.mediaDevices.getUserMedia({audio: true}).then(stream => {
-                const call = peer.call(activeConn.peer, stream);
-                alert("Chamando ID: " + activeConn.peer);
             });
         }
+    }
 
-        function switchTab(t, el) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            el.classList.add('active');
-            ['view-chats', 'view-groups', 'view-settings'].forEach(v => document.getElementById(v).style.display = 'none');
-            document.getElementById('view-' + t).style.display = 'block';
-            if(t === 'settings') {
-                document.getElementById('set-name-txt').innerText = currentUser.name;
-                document.getElementById('set-id-txt').innerText = currentUser.id;
-                document.getElementById('set-pfp-img').src = currentUser.pfp;
+    function iniciarChamada() {
+        if(!activeConn) return;
+        navigator.mediaDevices.getUserMedia({audio: true}).then(stream => {
+            const call = peer.call(activeConn.peer, stream);
+            alert("Chamando ID: " + activeConn.peer);
+        });
+    }
+
+    function switchTab(t, el) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        el.classList.add('active');
+        ['view-chats', 'view-groups', 'view-settings'].forEach(v => document.getElementById(v).style.display = 'none');
+        document.getElementById('view-' + t).style.display = 'block';
+        if(t === 'settings') {
+            document.getElementById('set-name-txt').innerText = currentUser.name;
+            document.getElementById('set-id-txt').innerText = currentUser.id;
+            document.getElementById('set-pfp-img').src = currentUser.pfp;
+        }
+    }
+
+    function renderConversas() {
+        const v = document.getElementById('view-chats'); v.innerHTML = "";
+        contatos.forEach((c, i) => {
+            v.innerHTML += `<div class="chat-row" onclick="abrirChat(${i})">
+                <div class="pfp-thumb">${c.pfp ? `<img src="${c.pfp}">` : ''}</div>
+                <div style="flex:1"><strong>${c.nome}</strong><br><small>${c.peerID}</small></div>
+            </div>`;
+        });
+    }
+
+    function abrirChat(i) {
+        chatAtivoIndex = i;
+        const c = contatos[i];
+        document.getElementById('chat-target-name').innerText = c.nome;
+        document.getElementById('chat-header-pfp').innerHTML = c.pfp ? `<img src="${c.pfp}">` : '';
+        document.getElementById('screen-app').classList.remove('active');
+        document.getElementById('screen-chat').classList.add('active');
+        if(!activeConn || activeConn.peer !== c.peerID) { activeConn = peer.connect(c.peerID); setupConn(activeConn); }
+        renderMensagens();
+    }
+
+    function fecharChat() { document.getElementById('screen-chat').classList.remove('active'); document.getElementById('screen-app').classList.add('active'); }
+    function logout() { localStorage.clear(); location.reload(); }
+    function copyID() { navigator.clipboard.writeText(currentUser.id); alert("ID Copiado!"); }
+    
+    function adicionarContato() {
+        const id = prompt("ID EXNA do amigo:");
+        if(id) {
+            if(!contatos.find(c => c.peerID === id)) {
+                contatos.push({ nome: "Conectando...", pfp: '', peerID: id, msgs: [] });
+                localStorage.setItem("EXNA_CONTATOS", JSON.stringify(contatos));
             }
-        }
-
-        function renderConversas() {
-            const v = document.getElementById('view-chats'); v.innerHTML = "";
-            contatos.forEach((c, i) => {
-                v.innerHTML += `<div class="chat-row" onclick="abrirChat(${i})">
-                    <div class="pfp-thumb">${c.pfp ? `<img src="${c.pfp}">` : ''}</div>
-                    <div style="flex:1"><strong>${c.nome}</strong><br><small>${c.peerID}</small></div>
-                </div>`;
-            });
-        }
-
-        function abrirChat(i) {
-            chatAtivoIndex = i;
-            const c = contatos[i];
-            document.getElementById('chat-target-name').innerText = c.nome;
-            document.getElementById('chat-header-pfp').innerHTML = c.pfp ? `<img src="${c.pfp}">` : '';
-            document.getElementById('screen-app').classList.remove('active');
-            document.getElementById('screen-chat').classList.add('active');
-            if(!activeConn || activeConn.peer !== c.peerID) { activeConn = peer.connect(c.peerID); setupConn(activeConn); }
-            renderMensagens();
-        }
-
-        function fecharChat() { document.getElementById('screen-chat').classList.remove('active'); document.getElementById('screen-app').classList.add('active'); }
-        function logout() { localStorage.clear(); location.reload(); }
-        function copyID() { navigator.clipboard.writeText(currentUser.id); alert("ID Copiado!"); }
-        function adicionarContato() {
-            const id = prompt("ID EXNA do amigo:");
-            if(id) {
-                if(!contatos.find(c => c.peerID === id)) {
-                    contatos.push({ nome: "Conectando...", pfp: '', peerID: id, msgs: [] });
-                    localStorage.setItem("EXNA_CONTATOS", JSON.stringify(contatos));
-                }
-                renderConversas();
-            }
-        }
-        function atualizarInfoAmigo(peerID, nome, pfp) {
-            let idx = contatos.findIndex(c => c.peerID === peerID);
-            if(idx !== -1) { contatos[idx].nome = nome; contatos[idx].pfp = pfp; }
-            localStorage.setItem("EXNA_CONTATOS", JSON.stringify(contatos));
             renderConversas();
         }
-    </script>
+    }
+    
+    function atualizarInfoAmigo(peerID, nome, pfp) {
+        let idx = contatos.findIndex(c => c.peerID === peerID);
+        if(idx !== -1) { contatos[idx].nome = nome; contatos[idx].pfp = pfp; }
+        localStorage.setItem("EXNA_CONTATOS", JSON.stringify(contatos));
+        renderConversas();
+    }
+</script>
 </body>
 </html>
