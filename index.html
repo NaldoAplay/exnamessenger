@@ -300,33 +300,56 @@
         return regex.test(str.trim());
     }
 
-    async function startRec() {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
-            audioChunks = [];
-            document.getElementById('btn-mic').classList.add('mic-active');
-            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-            mediaRecorder.onstop = () => {
-                const reader = new FileReader();
-                reader.readAsDataURL(new Blob(audioChunks));
-                reader.onloadend = () => {
-                    const base64 = reader.result;
-                    if(activeConn) activeConn.send({ type: 'audio', data: base64, format: 'audio' });
+    // --- SISTEMA DE ÁUDIO BLINDADO ---
+let globalStream = null; // Variável para controlar o desligamento real do hardware
+
+async function startRec() {
+    try {
+        // Pede permissão e captura o fluxo
+        globalStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(globalStream);
+        audioChunks = [];
+        
+        document.getElementById('btn-mic').classList.add('mic-active');
+        
+        mediaRecorder.ondataavailable = e => {
+            if (e.data.size > 0) audioChunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            const reader = new FileReader();
+            reader.readAsDataURL(audioBlob);
+            reader.onloadend = () => {
+                const base64 = reader.result;
+                // Envia apenas se houver conexão e dados
+                if(activeConn && audioChunks.length > 0) {
+                    activeConn.send({ type: 'audio', data: base64, format: 'audio' });
                     pushMsg({ data: base64, type: 'sent', format: 'audio' });
-                };
+                }
             };
-            mediaRecorder.start();
-        } catch (err) { alert("Ative o microfone!"); }
-    }
+            
+            // DESATIVA O MICROFONE REAL (Apaga a luzinha/ícone do navegador)
+            if (globalStream) {
+                globalStream.getTracks().forEach(track => track.stop());
+                globalStream = null;
+            }
+        };
 
-    function stopRec() { if(mediaRecorder) { mediaRecorder.stop(); document.getElementById('btn-mic').classList.remove('mic-active'); } }
-
-    function updateMyName(nome) {
-        currentUser.name = nome;
-        localStorage.setItem("EXNA_V4", JSON.stringify(currentUser));
-        if(activeConn) activeConn.send({ type: 'identidade', nome: currentUser.name, pfp: currentUser.pfp });
+        mediaRecorder.start();
+    } catch (err) {
+        console.error("Erro ao acessar microfone:", err);
+        alert("Erro: Verifique se o site tem permissão de microfone no cadeado.");
+        document.getElementById('btn-mic').classList.remove('mic-active');
     }
+}
+
+function stopRec() {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+        document.getElementById('btn-mic').classList.remove('mic-active');
+    }
+}
 
     // EDIÇÃO DE FOTO (ATUALIZADO COM COMPRESSÃO)
     function updateMyPFP(input) {
