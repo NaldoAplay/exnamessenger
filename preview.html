@@ -9,7 +9,7 @@
 content="width=device-width,
 initial-scale=1.0">
 
-<title>Preview</title>
+<title>Exna Preview</title>
 
 <style>
 
@@ -56,13 +56,13 @@ localStorage.getItem(
 
 if(!project) return;
 
-/* AUTO FILES */
+/* FILES */
 
 let html = "";
 let css = "";
 let js = "";
 
-/* FIND FILES */
+/* GET FILES */
 
 Object.keys(project).forEach(name=>{
 
@@ -71,21 +71,27 @@ project[name];
 
 if(content===null) return;
 
+/* HTML */
+
 if(name.endsWith(".html")){
 
-html += content;
+html += "\n" + content;
 
 }
+
+/* CSS */
 
 if(name.endsWith(".css")){
 
-css += content;
+css += "\n" + content;
 
 }
 
+/* JS */
+
 if(name.endsWith(".js")){
 
-js += content;
+js += "\n" + content;
 
 }
 
@@ -141,18 +147,30 @@ lastCode = finalCode;
 
 buildPreview();
 
-/* LIVE */
+/* STORAGE UPDATE */
 
 window.addEventListener(
 "storage",
-buildPreview
+(e)=>{
+
+if(
+e.key==="preview-refresh"
+||
+e.key==="exnacode-v2"
+){
+
+buildPreview();
+
+}
+
+}
 );
 
-/* CHECK */
+/* FALLBACK */
 
 setInterval(
 buildPreview,
-1000
+1200
 );
 
 </script>
