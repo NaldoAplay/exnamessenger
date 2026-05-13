@@ -107,7 +107,7 @@ overflow:hidden;
 /* SIDEBAR */
 
 .sidebar{
-width:260px;
+width:270px;
 background:#11161d;
 border-right:1px solid #30363d;
 display:flex;
@@ -143,9 +143,10 @@ color:white;
 padding:6px 10px;
 border-radius:8px;
 font-size:12px;
+cursor:pointer;
 }
 
-/* FILE LIST */
+/* FILES */
 
 .files{
 flex:1;
@@ -153,24 +154,34 @@ overflow:auto;
 padding:10px;
 }
 
-.file{
-padding:12px;
+.file,
+.folder{
+padding:11px;
 border-radius:10px;
-margin-bottom:6px;
-background:#161b22;
+margin-bottom:5px;
 font-size:14px;
 cursor:pointer;
-color:#c9d1d9;
 display:flex;
 align-items:center;
 gap:10px;
+color:#c9d1d9;
+}
+
+.file:hover,
+.folder:hover{
+background:#1b2430;
 }
 
 .file.active{
 background:#1f6feb;
 }
 
-/* EDITOR AREA */
+.folder{
+font-weight:700;
+color:#58a6ff;
+}
+
+/* WORKSPACE */
 
 .workspace{
 flex:1;
@@ -186,8 +197,8 @@ height:42px;
 background:#11161d;
 display:flex;
 align-items:center;
-border-bottom:1px solid #30363d;
 overflow:auto;
+border-bottom:1px solid #30363d;
 }
 
 .tab{
@@ -198,6 +209,7 @@ align-items:center;
 font-size:14px;
 color:#8b949e;
 border-right:1px solid #30363d;
+cursor:pointer;
 white-space:nowrap;
 }
 
@@ -231,20 +243,16 @@ color:#8b949e;
 @media(max-width:900px){
 
 .sidebar{
-width:210px;
+width:220px;
 }
 
-.actions{
-gap:6px;
+.logo{
+font-size:18px;
 }
 
 .actions button{
 padding:8px 11px;
 font-size:12px;
-}
-
-.logo{
-font-size:18px;
 }
 
 }
@@ -285,20 +293,20 @@ EXNACODE
 
 <div class="actions">
 
+<button onclick="createFile()">
+Arquivo
+</button>
+
+<button onclick="createFolder()">
+Pasta
+</button>
+
 <button onclick="openPreview()">
 Preview
 </button>
 
 <button onclick="saveProject()">
 Salvar
-</button>
-
-<button onclick="copyCode()">
-Copiar
-</button>
-
-<button onclick="formatCode()">
-Formatar
 </button>
 
 <button onclick="toggleFullscreen()">
@@ -325,12 +333,8 @@ EXNA PROJECT
 
 <div class="project-actions">
 
-<button onclick="newFile()">
-+Arquivo
-</button>
-
-<button onclick="newFolder()">
-+Pasta
+<button onclick="openDeviceFiles()">
+Abrir
 </button>
 
 </div>
@@ -358,11 +362,11 @@ id="tabs">
 <div class="status">
 
 <span id="statusText">
-ExnaCode pronto ✔
+ExnaCode v2 ✔
 </span>
 
 <span>
-iPad Mode
+iPad Dev Mode
 </span>
 
 </div>
@@ -379,59 +383,20 @@ iPad Mode
 
 <script>
 
-/* FILE SYSTEM */
+/* PROJECT */
 
-let project = {
+let project = {};
 
-"index.html":
-`<div class="container">
+let openedTabs = [];
 
-<h1>Olá ExnaCode 🚀</h1>
-
-<button onclick="showMessage()">
-Clique Aqui
-</button>
-
-</div>`,
-
-"style.css":
-`body{
-margin:0;
-background:#000;
-color:white;
-font-family:Arial;
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh;
-}
-
-.container{
-text-align:center;
-}
-
-button{
-padding:15px 25px;
-border:none;
-border-radius:12px;
-background:#58a6ff;
-color:white;
-font-size:18px;
-}`,
-
-"script.js":
-`function showMessage(){
-
-alert("Funcionando!");
-
-}`
-
-};
+let currentFile = null;
 
 /* LOAD */
 
 const saved =
-localStorage.getItem("exnacode-project");
+localStorage.getItem(
+"exnacode-v2"
+);
 
 if(saved){
 
@@ -439,9 +404,6 @@ project =
 JSON.parse(saved);
 
 }
-
-let currentFile =
-"index.html";
 
 /* MONACO */
 
@@ -461,7 +423,7 @@ monaco.editor.create(
 document.getElementById("editor"),
 {
 
-value:project[currentFile],
+value:"",
 
 language:"html",
 
@@ -490,14 +452,18 @@ tabSize:2
 
 editor.onDidChangeModelContent(()=>{
 
+if(currentFile){
+
 project[currentFile] =
 editor.getValue();
 
 saveLocal();
 
+}
+
 });
 
-renderFiles();
+renderExplorer();
 
 });
 
@@ -506,46 +472,126 @@ renderFiles();
 function saveLocal(){
 
 localStorage.setItem(
-"exnacode-project",
+"exnacode-v2",
 JSON.stringify(project)
 );
 
 }
 
-/* RENDER FILES */
+/* CREATE FILE */
 
-function renderFiles(){
+function createFile(){
+
+const name =
+prompt(
+"Nome do arquivo:"
+);
+
+if(!name) return;
+
+project[name] = "";
+
+saveLocal();
+
+renderExplorer();
+
+}
+
+/* CREATE FOLDER */
+
+function createFolder(){
+
+const name =
+prompt(
+"Nome da pasta:"
+);
+
+if(!name) return;
+
+project["📁 "+name] = null;
+
+saveLocal();
+
+renderExplorer();
+
+}
+
+/* RENDER */
+
+function renderExplorer(){
 
 const files =
 document.getElementById("files");
 
-const tabs =
-document.getElementById("tabs");
-
 files.innerHTML = "";
-tabs.innerHTML = "";
 
 Object.keys(project).forEach(name=>{
 
-/* SIDEBAR */
-
-const file =
+const item =
 document.createElement("div");
 
-file.className =
-"file" +
-(name===currentFile
-?" active":"");
+if(project[name]===null){
 
-file.innerHTML =
+item.className =
+"folder";
+
+item.innerHTML =
+"📁 " + name
+.replace("📁 ","");
+
+}else{
+
+item.className =
+"file";
+
+item.innerHTML =
 "📄 " + name;
 
-file.onclick =
+item.onclick =
 ()=>openFile(name);
 
-files.appendChild(file);
+}
 
-/* TAB */
+files.appendChild(item);
+
+});
+
+renderTabs();
+
+}
+
+/* OPEN FILE */
+
+function openFile(name){
+
+currentFile = name;
+
+editor.setValue(
+project[name]
+);
+
+if(!openedTabs.includes(name)){
+
+openedTabs.push(name);
+
+}
+
+detectLanguage(name);
+
+renderTabs();
+
+}
+
+/* TABS */
+
+function renderTabs(){
+
+const tabs =
+document.getElementById("tabs");
+
+tabs.innerHTML = "";
+
+openedTabs.forEach(name=>{
 
 const tab =
 document.createElement("div");
@@ -557,24 +603,18 @@ tab.className =
 
 tab.innerText = name;
 
+tab.onclick =
+()=>openFile(name);
+
 tabs.appendChild(tab);
 
 });
 
 }
 
-/* OPEN FILE */
+/* LANGUAGE */
 
-function openFile(name){
-
-project[currentFile] =
-editor.getValue();
-
-currentFile = name;
-
-editor.setValue(
-project[name]
-);
+function detectLanguage(name){
 
 if(name.endsWith(".html")){
 
@@ -603,35 +643,6 @@ editor.getModel(),
 
 }
 
-renderFiles();
-
-}
-
-/* NEW FILE */
-
-function newFile(){
-
-const name =
-prompt("Nome do arquivo:");
-
-if(!name) return;
-
-project[name] = "";
-
-saveLocal();
-
-renderFiles();
-
-}
-
-/* NEW FOLDER */
-
-function newFolder(){
-
-alert(
-"Pastas serão adicionadas na próxima versão 😄"
-);
-
 }
 
 /* PREVIEW */
@@ -647,31 +658,7 @@ window.open(
 
 }
 
-/* COPY */
-
-function copyCode(){
-
-navigator.clipboard.writeText(
-editor.getValue()
-);
-
-alert("Código copiado!");
-
-}
-
-/* FORMAT */
-
-async function formatCode(){
-
-await editor
-.getAction(
-"editor.action.formatDocument"
-)
-.run();
-
-}
-
-/* EXPORT */
+/* SAVE PROJECT */
 
 function saveProject(){
 
@@ -721,30 +708,15 @@ document.exitFullscreen();
 
 }
 
-/* SHORTCUTS */
+/* OPEN DEVICE FILES */
 
-document.addEventListener(
-"keydown",
-(e)=>{
+async function openDeviceFiles(){
 
-if(e.metaKey && e.key==="s"){
-
-e.preventDefault();
-
-saveProject();
-
-}
-
-if(e.metaKey && e.key==="p"){
-
-e.preventDefault();
-
-openPreview();
-
-}
-
-}
+alert(
+"No iPad o Safari limita abrir pastas reais. Mas você já pode importar/exportar projetos 😄"
 );
+
+}
 
 /* PWA */
 
