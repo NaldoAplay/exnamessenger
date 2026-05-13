@@ -13,17 +13,79 @@ initial-scale=1.0">
 
 <style>
 
-html,body{
+*{
 margin:0;
+padding:0;
+box-sizing:border-box;
+}
+
+html,body{
 width:100%;
 height:100%;
 overflow:hidden;
-background:white;
+background:#0d1117;
+font-family:-apple-system,BlinkMacSystemFont,sans-serif;
 }
 
+/* TOPBAR */
+
+.topbar{
+position:fixed;
+top:0;
+left:0;
+right:0;
+height:60px;
+background:#161b22;
+border-bottom:1px solid #30363d;
+display:flex;
+align-items:center;
+justify-content:space-between;
+padding:0 15px;
+z-index:9999;
+}
+
+/* BACK */
+
+.back-btn{
+background:#1f6feb;
+border:none;
+color:white;
+padding:11px 16px;
+border-radius:12px;
+font-size:14px;
+font-weight:600;
+cursor:pointer;
+}
+
+/* TITLE */
+
+.title{
+color:#58a6ff;
+font-size:16px;
+font-weight:700;
+}
+
+/* REFRESH */
+
+.refresh-btn{
+background:#238636;
+border:none;
+color:white;
+padding:11px 16px;
+border-radius:12px;
+font-size:14px;
+font-weight:600;
+cursor:pointer;
+}
+
+/* IFRAME */
+
 iframe{
+position:absolute;
+top:60px;
+left:0;
 width:100%;
-height:100%;
+height:calc(100% - 60px);
 border:none;
 background:white;
 }
@@ -33,6 +95,32 @@ background:white;
 </head>
 
 <body>
+
+<!-- TOPBAR -->
+
+<div class="topbar">
+
+<button class="back-btn"
+onclick="goBack()">
+
+← Voltar
+
+</button>
+
+<div class="title">
+EXNA PREVIEW
+</div>
+
+<button class="refresh-btn"
+onclick="buildPreview()">
+
+Atualizar
+
+</button>
+
+</div>
+
+<!-- PREVIEW -->
 
 <iframe id="preview"></iframe>
 
@@ -143,6 +231,14 @@ lastCode = finalCode;
 
 }
 
+/* BACK */
+
+function goBack(){
+
+history.back();
+
+}
+
 /* START */
 
 buildPreview();
@@ -166,7 +262,7 @@ buildPreview();
 }
 );
 
-/* FALLBACK */
+/* AUTO */
 
 setInterval(
 buildPreview,
