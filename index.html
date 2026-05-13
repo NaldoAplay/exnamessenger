@@ -275,6 +275,32 @@ height:6px;
 background:#30363d;
 border-radius:20px;
 }
+  #menuBtn{
+background:#1f6feb;
+border:none;
+color:white;
+width:42px;
+height:42px;
+border-radius:10px;
+font-size:20px;
+cursor:pointer;
+flex-shrink:0;
+}
+
+/* SIDEBAR */
+
+.sidebar{
+width:270px;
+transition:.25s;
+}
+
+/* CLOSED */
+
+.sidebar.closed{
+width:0;
+border:none;
+overflow:hidden;
+}
 
 </style>
 
@@ -287,6 +313,12 @@ border-radius:20px;
 <!-- TOPBAR -->
 
 <div class="topbar">
+  <button id="menuBtn"
+onclick="toggleSidebar()">
+
+☰
+
+</button>
 
 <div class="logo">
 
@@ -776,6 +808,16 @@ navigator.serviceWorker
 .register(
 "service-worker.js"
 );
+
+}
+  /* SIDEBAR */
+
+function toggleSidebar(){
+
+document
+.querySelector(".sidebar")
+.classList
+.toggle("closed");
 
 }
 
