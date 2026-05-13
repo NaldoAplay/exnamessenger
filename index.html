@@ -7,24 +7,127 @@
 
 <meta name="viewport"
 content="width=device-width,
-initial-scale=1.0">
+initial-scale=1.0,
+maximum-scale=1.0,
+user-scalable=no">
 
-<title>Preview</title>
+<title>ExnaCode</title>
 
 <style>
 
-html,body{
+*{
 margin:0;
+padding:0;
+box-sizing:border-box;
+-webkit-tap-highlight-color:transparent;
+}
+
+html,body{
 width:100%;
 height:100%;
-background:white;
+overflow:hidden;
+background:#0d1117;
+font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+color:white;
+}
+
+/* APP */
+
+.app{
+display:flex;
+flex-direction:column;
+width:100%;
+height:100%;
+}
+
+/* TOPBAR */
+
+.topbar{
+height:60px;
+background:#161b22;
+display:flex;
+align-items:center;
+justify-content:space-between;
+padding:0 16px;
+border-bottom:1px solid #30363d;
+flex-shrink:0;
+}
+
+.logo{
+font-size:22px;
+font-weight:700;
+color:#58a6ff;
+letter-spacing:1px;
+}
+
+.actions{
+display:flex;
+gap:10px;
+overflow:auto;
+}
+
+.actions button{
+background:#238636;
+border:none;
+color:white;
+padding:10px 14px;
+border-radius:10px;
+font-size:15px;
+font-weight:600;
+cursor:pointer;
+white-space:nowrap;
+}
+
+.actions button:active{
+transform:scale(.95);
+}
+
+/* EDITOR */
+
+.editor{
+flex:1;
+display:flex;
+flex-direction:column;
 overflow:hidden;
 }
 
-iframe{
+textarea{
+flex:1;
 width:100%;
-height:100%;
+background:#0d1117;
+color:#58a6ff;
 border:none;
+outline:none;
+padding:20px;
+font-size:16px;
+font-family:monospace;
+resize:none;
+line-height:1.6;
+}
+
+/* STATUS */
+
+.status{
+height:34px;
+background:#161b22;
+border-top:1px solid #30363d;
+display:flex;
+align-items:center;
+padding:0 15px;
+font-size:13px;
+color:#8b949e;
+}
+
+/* SCROLL */
+
+::-webkit-scrollbar{
+width:6px;
+height:6px;
+}
+
+::-webkit-scrollbar-thumb{
+background:#30363d;
+border-radius:20px;
 }
 
 </style>
@@ -33,42 +136,212 @@ border:none;
 
 <body>
 
-<iframe id="preview"></iframe>
+<div class="app">
+
+<!-- TOPBAR -->
+
+<div class="topbar">
+
+<div class="logo">
+EXNACODE
+</div>
+
+<div class="actions">
+
+<button onclick="openPreview()">
+Preview
+</button>
+
+<button onclick="copyCode()">
+Copiar
+</button>
+
+<button onclick="saveFile()">
+Salvar
+</button>
+
+<button onclick="toggleFullscreen()">
+Tela Cheia
+</button>
+
+</div>
+
+</div>
+
+<!-- EDITOR -->
+
+<div class="editor">
+
+<textarea id="editor">
+
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<style>
+
+body{
+background:#000;
+color:white;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+font-family:Arial;
+flex-direction:column;
+gap:20px;
+}
+
+button{
+padding:15px 25px;
+border:none;
+border-radius:12px;
+background:#58a6ff;
+color:white;
+font-size:18px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>Olá ExnaCode 🚀</h1>
+
+<button onclick="alert('Funcionando!')">
+Clique Aqui
+</button>
+
+</body>
+
+</html>
+
+</textarea>
+
+</div>
+
+<div class="status">
+Editor online pronto ✔
+</div>
+
+</div>
 
 <script>
 
-const preview =
-document.getElementById("preview");
+const editor =
+document.getElementById("editor");
 
-function updatePreview(){
+/* LOAD */
 
-const code =
+if(localStorage.getItem("exnacode")){
+
+editor.value =
 localStorage.getItem("exnacode");
-
-preview.srcdoc = code;
 
 }
 
-/* START */
+/* LIVE SAVE */
 
-updatePreview();
-
-/* LIVE UPDATE */
-
-window.addEventListener(
-"storage",
+editor.addEventListener(
+"input",
 ()=>{
 
-updatePreview();
+localStorage.setItem(
+"exnacode",
+editor.value
+);
 
 }
 );
 
-/* AUTO REFRESH */
+/* OPEN PREVIEW */
 
-setInterval(
-updatePreview,
-500
+function openPreview(){
+
+window.open(
+"preview.html",
+"_blank"
+);
+
+}
+
+/* COPY */
+
+function copyCode(){
+
+navigator.clipboard.writeText(
+editor.value
+);
+
+alert("Código copiado!");
+
+}
+
+/* SAVE */
+
+function saveFile(){
+
+const blob =
+new Blob([editor.value],{
+type:"text/html"
+});
+
+const a =
+document.createElement("a");
+
+a.href =
+URL.createObjectURL(blob);
+
+a.download =
+"index.html";
+
+a.click();
+
+}
+
+/* FULLSCREEN */
+
+function toggleFullscreen(){
+
+if(!document.fullscreenElement){
+
+document.documentElement
+.requestFullscreen();
+
+}else{
+
+document.exitFullscreen();
+
+}
+
+}
+
+/* SHORTCUTS */
+
+document.addEventListener(
+"keydown",
+(e)=>{
+
+if(e.metaKey && e.key==="s"){
+
+e.preventDefault();
+
+saveFile();
+
+}
+
+if(e.metaKey && e.key==="p"){
+
+e.preventDefault();
+
+openPreview();
+
+}
+
+}
 );
 
 </script>
