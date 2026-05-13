@@ -47,14 +47,51 @@ let lastCode = "";
 
 function buildPreview(){
 
-const files =
+const project =
 JSON.parse(
 localStorage.getItem(
-"exnacode-project"
+"exnacode-v2"
 )
 );
 
-if(!files) return;
+if(!project) return;
+
+/* AUTO FILES */
+
+let html = "";
+let css = "";
+let js = "";
+
+/* FIND FILES */
+
+Object.keys(project).forEach(name=>{
+
+const content =
+project[name];
+
+if(content===null) return;
+
+if(name.endsWith(".html")){
+
+html += content;
+
+}
+
+if(name.endsWith(".css")){
+
+css += content;
+
+}
+
+if(name.endsWith(".js")){
+
+js += content;
+
+}
+
+});
+
+/* FINAL */
 
 const finalCode =
 
@@ -67,7 +104,7 @@ const finalCode =
 
 <style>
 
-${files["style.css"] || ""}
+${css}
 
 </style>
 
@@ -75,11 +112,11 @@ ${files["style.css"] || ""}
 
 <body>
 
-${files["index.html"] || ""}
+${html}
 
 <script>
 
-${files["script.js"] || ""}
+${js}
 
 <\/script>
 
@@ -87,6 +124,8 @@ ${files["script.js"] || ""}
 
 </html>
 `;
+
+/* UPDATE */
 
 if(finalCode !== lastCode){
 
@@ -102,14 +141,14 @@ lastCode = finalCode;
 
 buildPreview();
 
-/* UPDATE */
+/* LIVE */
 
 window.addEventListener(
 "storage",
 buildPreview
 );
 
-/* LIGHT CHECK */
+/* CHECK */
 
 setInterval(
 buildPreview,
