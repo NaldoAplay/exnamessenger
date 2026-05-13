@@ -13,11 +13,14 @@ user-scalable=no">
 
 <title>ExnaCode</title>
 
+<link rel="manifest"
+href="manifest.json">
+
 <link rel="apple-touch-icon"
 href="icon-192.png">
 
-<link rel="manifest"
-href="manifest.json">
+<meta name="theme-color"
+content="#0d1117">
 
 <style>
 
@@ -65,15 +68,15 @@ gap:12px;
 font-size:22px;
 font-weight:700;
 color:#58a6ff;
-letter-spacing:1px;
 }
 
-.logo-icon{
+.logo img{
 width:38px;
 height:38px;
 border-radius:10px;
-object-fit:cover;
 }
+
+/* ACTIONS */
 
 .actions{
 display:flex;
@@ -91,11 +94,89 @@ font-size:14px;
 font-weight:600;
 cursor:pointer;
 white-space:nowrap;
-transition:.2s;
 }
 
-.actions button:active{
-transform:scale(.95);
+/* MAIN */
+
+.main{
+flex:1;
+display:flex;
+overflow:hidden;
+}
+
+/* SIDEBAR */
+
+.sidebar{
+width:260px;
+background:#11161d;
+border-right:1px solid #30363d;
+display:flex;
+flex-direction:column;
+overflow:hidden;
+}
+
+/* PROJECT HEADER */
+
+.project-header{
+padding:14px;
+border-bottom:1px solid #30363d;
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+.project-header span{
+font-size:14px;
+font-weight:700;
+color:#58a6ff;
+}
+
+.project-actions{
+display:flex;
+gap:8px;
+}
+
+.project-actions button{
+background:#1f6feb;
+border:none;
+color:white;
+padding:6px 10px;
+border-radius:8px;
+font-size:12px;
+}
+
+/* FILE LIST */
+
+.files{
+flex:1;
+overflow:auto;
+padding:10px;
+}
+
+.file{
+padding:12px;
+border-radius:10px;
+margin-bottom:6px;
+background:#161b22;
+font-size:14px;
+cursor:pointer;
+color:#c9d1d9;
+display:flex;
+align-items:center;
+gap:10px;
+}
+
+.file.active{
+background:#1f6feb;
+}
+
+/* EDITOR AREA */
+
+.workspace{
+flex:1;
+display:flex;
+flex-direction:column;
+overflow:hidden;
 }
 
 /* TABS */
@@ -107,7 +188,6 @@ display:flex;
 align-items:center;
 border-bottom:1px solid #30363d;
 overflow:auto;
-flex-shrink:0;
 }
 
 .tab{
@@ -118,7 +198,6 @@ align-items:center;
 font-size:14px;
 color:#8b949e;
 border-right:1px solid #30363d;
-cursor:pointer;
 white-space:nowrap;
 }
 
@@ -131,7 +210,6 @@ color:#58a6ff;
 
 #editor{
 flex:1;
-width:100%;
 }
 
 /* STATUS */
@@ -146,20 +224,23 @@ justify-content:space-between;
 padding:0 15px;
 font-size:13px;
 color:#8b949e;
-flex-shrink:0;
 }
 
 /* MOBILE */
 
-@media(max-width:700px){
+@media(max-width:900px){
+
+.sidebar{
+width:210px;
+}
 
 .actions{
 gap:6px;
 }
 
 .actions button{
-padding:9px 12px;
-font-size:13px;
+padding:8px 11px;
+font-size:12px;
 }
 
 .logo{
@@ -194,9 +275,7 @@ border-radius:20px;
 
 <div class="logo">
 
-<img
-src="icon-192.png"
-class="logo-icon">
+<img src="icon-192.png">
 
 <span>
 EXNACODE
@@ -230,32 +309,51 @@ Tela Cheia
 
 </div>
 
-<!-- TABS -->
+<!-- MAIN -->
 
-<div class="tabs">
+<div class="main">
 
-<div class="tab active"
-onclick="switchFile('html',this)">
-index.html
+<!-- SIDEBAR -->
+
+<div class="sidebar">
+
+<div class="project-header">
+
+<span>
+EXNA PROJECT
+</span>
+
+<div class="project-actions">
+
+<button onclick="newFile()">
++Arquivo
+</button>
+
+<button onclick="newFolder()">
++Pasta
+</button>
+
 </div>
 
-<div class="tab"
-onclick="switchFile('css',this)">
-style.css
 </div>
 
-<div class="tab"
-onclick="switchFile('js',this)">
-script.js
+<div class="files"
+id="files">
+
 </div>
 
 </div>
 
-<!-- EDITOR -->
+<!-- WORKSPACE -->
+
+<div class="workspace">
+
+<div class="tabs"
+id="tabs">
+
+</div>
 
 <div id="editor"></div>
-
-<!-- STATUS -->
 
 <div class="status">
 
@@ -271,20 +369,21 @@ iPad Mode
 
 </div>
 
+</div>
+
+</div>
+
 <!-- MONACO -->
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
 
 <script>
 
-let currentFile = "html";
+/* FILE SYSTEM */
 
-/* FILES */
+let project = {
 
-let files = {
-
-html:
-
+"index.html":
 `<div class="container">
 
 <h1>Olá ExnaCode 🚀</h1>
@@ -295,8 +394,7 @@ Clique Aqui
 
 </div>`,
 
-css:
-
+"style.css":
 `body{
 margin:0;
 background:#000;
@@ -321,8 +419,7 @@ color:white;
 font-size:18px;
 }`,
 
-js:
-
+"script.js":
 `function showMessage(){
 
 alert("Funcionando!");
@@ -338,9 +435,13 @@ localStorage.getItem("exnacode-project");
 
 if(saved){
 
-files = JSON.parse(saved);
+project =
+JSON.parse(saved);
 
 }
+
+let currentFile =
+"index.html";
 
 /* MONACO */
 
@@ -360,7 +461,7 @@ monaco.editor.create(
 document.getElementById("editor"),
 {
 
-value:files.html,
+value:project[currentFile],
 
 language:"html",
 
@@ -376,17 +477,7 @@ enabled:true
 
 wordWrap:"on",
 
-roundedSelection:true,
-
-scrollBeyondLastLine:false,
-
-cursorSmoothCaretAnimation:"on",
-
 smoothScrolling:true,
-
-formatOnPaste:true,
-
-formatOnType:true,
 
 autoClosingBrackets:"always",
 
@@ -397,40 +488,95 @@ tabSize:2
 }
 );
 
-/* AUTO SAVE */
-
 editor.onDidChangeModelContent(()=>{
 
-files[currentFile] =
+project[currentFile] =
 editor.getValue();
 
 saveLocal();
 
 });
 
+renderFiles();
+
 });
 
-/* SWITCH FILE */
+/* SAVE */
 
-function switchFile(file,el){
+function saveLocal(){
 
-files[currentFile] =
+localStorage.setItem(
+"exnacode-project",
+JSON.stringify(project)
+);
+
+}
+
+/* RENDER FILES */
+
+function renderFiles(){
+
+const files =
+document.getElementById("files");
+
+const tabs =
+document.getElementById("tabs");
+
+files.innerHTML = "";
+tabs.innerHTML = "";
+
+Object.keys(project).forEach(name=>{
+
+/* SIDEBAR */
+
+const file =
+document.createElement("div");
+
+file.className =
+"file" +
+(name===currentFile
+?" active":"");
+
+file.innerHTML =
+"📄 " + name;
+
+file.onclick =
+()=>openFile(name);
+
+files.appendChild(file);
+
+/* TAB */
+
+const tab =
+document.createElement("div");
+
+tab.className =
+"tab" +
+(name===currentFile
+?" active":"");
+
+tab.innerText = name;
+
+tabs.appendChild(tab);
+
+});
+
+}
+
+/* OPEN FILE */
+
+function openFile(name){
+
+project[currentFile] =
 editor.getValue();
 
-currentFile = file;
+currentFile = name;
 
-document.querySelectorAll(".tab")
-.forEach(tab=>{
+editor.setValue(
+project[name]
+);
 
-tab.classList.remove("active");
-
-});
-
-el.classList.add("active");
-
-editor.setValue(files[file]);
-
-if(file==="html"){
+if(name.endsWith(".html")){
 
 monaco.editor.setModelLanguage(
 editor.getModel(),
@@ -439,7 +585,7 @@ editor.getModel(),
 
 }
 
-if(file==="css"){
+if(name.endsWith(".css")){
 
 monaco.editor.setModelLanguage(
 editor.getModel(),
@@ -448,7 +594,7 @@ editor.getModel(),
 
 }
 
-if(file==="js"){
+if(name.endsWith(".js")){
 
 monaco.editor.setModelLanguage(
 editor.getModel(),
@@ -457,15 +603,33 @@ editor.getModel(),
 
 }
 
+renderFiles();
+
 }
 
-/* SAVE LOCAL */
+/* NEW FILE */
 
-function saveLocal(){
+function newFile(){
 
-localStorage.setItem(
-"exnacode-project",
-JSON.stringify(files)
+const name =
+prompt("Nome do arquivo:");
+
+if(!name) return;
+
+project[name] = "";
+
+saveLocal();
+
+renderFiles();
+
+}
+
+/* NEW FOLDER */
+
+function newFolder(){
+
+alert(
+"Pastas serão adicionadas na próxima versão 😄"
 );
 
 }
@@ -507,26 +671,20 @@ await editor
 
 }
 
-/* SAVE PROJECT */
+/* EXPORT */
 
 function saveProject(){
 
 saveLocal();
 
-const project = {
-
-"index.html":files.html,
-
-"style.css":files.css,
-
-"script.js":files.js
-
-};
-
 const blob =
 new Blob(
 [
-JSON.stringify(project,null,2)
+JSON.stringify(
+project,
+null,
+2
+)
 ],
 {
 type:"application/json"
@@ -540,7 +698,7 @@ a.href =
 URL.createObjectURL(blob);
 
 a.download =
-"ExnaCodeProject.json";
+"ExnaProject.json";
 
 a.click();
 
@@ -593,7 +751,9 @@ openPreview();
 if("serviceWorker" in navigator){
 
 navigator.serviceWorker
-.register("service-worker.js");
+.register(
+"service-worker.js"
+);
 
 }
 
