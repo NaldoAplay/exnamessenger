@@ -59,6 +59,7 @@ align-items:center;
 justify-content:space-between;
 padding:0 15px;
 flex-shrink:0;
+gap:15px;
 }
 
 .logo{
@@ -68,6 +69,7 @@ gap:12px;
 font-size:22px;
 font-weight:700;
 color:#58a6ff;
+white-space:nowrap;
 }
 
 .logo img{
@@ -94,6 +96,11 @@ font-size:14px;
 font-weight:600;
 cursor:pointer;
 white-space:nowrap;
+transition:.2s;
+}
+
+.actions button:active{
+transform:scale(.95);
 }
 
 /* MAIN */
@@ -305,8 +312,16 @@ Pasta
 Preview
 </button>
 
+<button onclick="refreshPreview()">
+Atualizar
+</button>
+
 <button onclick="saveProject()">
 Salvar
+</button>
+
+<button onclick="clearCache()">
+Limpar
 </button>
 
 <button onclick="toggleFullscreen()">
@@ -536,13 +551,15 @@ item.className =
 "folder";
 
 item.innerHTML =
-"📁 " + name
-.replace("📁 ","");
+"📁 " +
+name.replace("📁 ","");
 
 }else{
 
 item.className =
-"file";
+"file" +
+(name===currentFile
+?" active":"");
 
 item.innerHTML =
 "📄 " + name;
@@ -658,6 +675,21 @@ window.open(
 
 }
 
+/* REFRESH */
+
+function refreshPreview(){
+
+localStorage.setItem(
+"preview-refresh",
+Date.now()
+);
+
+alert(
+"Preview atualizado!"
+);
+
+}
+
 /* SAVE PROJECT */
 
 function saveProject(){
@@ -691,6 +723,24 @@ a.click();
 
 }
 
+/* CLEAR */
+
+function clearCache(){
+
+if(
+confirm(
+"Limpar projeto e cache?"
+)
+){
+
+localStorage.clear();
+
+location.reload();
+
+}
+
+}
+
 /* FULLSCREEN */
 
 function toggleFullscreen(){
@@ -708,12 +758,12 @@ document.exitFullscreen();
 
 }
 
-/* OPEN DEVICE FILES */
+/* OPEN DEVICE */
 
 async function openDeviceFiles(){
 
 alert(
-"No iPad o Safari limita abrir pastas reais. Mas você já pode importar/exportar projetos 😄"
+"No iPad o Safari ainda limita abrir pastas reais 😅"
 );
 
 }
