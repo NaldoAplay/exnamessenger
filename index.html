@@ -4,236 +4,27 @@
 <head>
 
 <meta charset="UTF-8">
+
 <meta name="viewport"
 content="width=device-width,
-initial-scale=1.0,
-maximum-scale=1.0,
-user-scalable=no">
+initial-scale=1.0">
 
-<title>ExnaCode</title>
-
-<link rel="manifest" href="manifest.json">
+<title>Preview</title>
 
 <style>
 
-*{
-margin:0;
-padding:0;
-box-sizing:border-box;
--webkit-tap-highlight-color:transparent;
-}
-
 html,body{
+margin:0;
 width:100%;
-height:100%;
-overflow:hidden;
-background:#0d1117;
-font-family:-apple-system,BlinkMacSystemFont,sans-serif;
-color:white;
-}
-
-/* APP */
-
-.app{
-display:flex;
-flex-direction:column;
-width:100%;
-height:100%;
-}
-
-/* TOPBAR */
-
-.topbar{
-height:58px;
-background:#161b22;
-display:flex;
-align-items:center;
-justify-content:space-between;
-padding:0 16px;
-border-bottom:1px solid #30363d;
-flex-shrink:0;
-}
-
-.logo{
-font-size:20px;
-font-weight:700;
-color:#58a6ff;
-}
-
-.actions{
-display:flex;
-gap:10px;
-}
-
-.actions button{
-background:#238636;
-border:none;
-color:white;
-padding:10px 14px;
-border-radius:10px;
-font-size:15px;
-font-weight:600;
-}
-
-.actions button:active{
-transform:scale(.95);
-}
-
-/* BODY */
-
-.main{
-flex:1;
-display:flex;
-overflow:hidden;
-}
-
-/* SIDEBAR */
-
-.sidebar{
-width:220px;
-background:#11161d;
-border-right:1px solid #30363d;
-padding:14px;
-overflow:auto;
-}
-
-.sidebar h2{
-font-size:14px;
-margin-bottom:15px;
-color:#8b949e;
-}
-
-.file{
-padding:12px;
-border-radius:10px;
-margin-bottom:8px;
-background:#161b22;
-font-size:15px;
-}
-
-.file.active{
-background:#1f6feb;
-}
-
-/* EDITOR AREA */
-
-.workspace{
-flex:1;
-display:flex;
-flex-direction:column;
-overflow:hidden;
-}
-
-/* TABS */
-
-.tabs{
-height:45px;
-background:#161b22;
-display:flex;
-align-items:center;
-border-bottom:1px solid #30363d;
-overflow:auto;
-}
-
-.tab{
-padding:0 18px;
-height:100%;
-display:flex;
-align-items:center;
-font-size:14px;
-color:#c9d1d9;
-border-right:1px solid #30363d;
-white-space:nowrap;
-}
-
-.tab.active{
-background:#0d1117;
-}
-
-/* SPLIT */
-
-.split{
-flex:1;
-display:flex;
-overflow:hidden;
-}
-
-/* CODE */
-
-.editor-pane{
-width:50%;
-height:100%;
-background:#0d1117;
-border-right:1px solid #30363d;
-display:flex;
-flex-direction:column;
-}
-
-textarea{
-flex:1;
-width:100%;
-background:#0d1117;
-color:#58a6ff;
-border:none;
-outline:none;
-padding:20px;
-font-size:16px;
-font-family:monospace;
-resize:none;
-line-height:1.6;
-}
-
-/* PREVIEW */
-
-.preview-pane{
-width:50%;
 height:100%;
 background:white;
+overflow:hidden;
 }
 
 iframe{
 width:100%;
 height:100%;
 border:none;
-background:white;
-}
-
-/* MOBILE */
-
-@media(max-width:900px){
-
-.sidebar{
-display:none;
-}
-
-.split{
-flex-direction:column;
-}
-
-.editor-pane{
-width:100%;
-height:50%;
-border-right:none;
-border-bottom:1px solid #30363d;
-}
-
-.preview-pane{
-width:100%;
-height:50%;
-}
-
-}
-
-/* SCROLL */
-
-::-webkit-scrollbar{
-width:6px;
-height:6px;
-}
-
-::-webkit-scrollbar-thumb{
-background:#30363d;
-border-radius:20px;
 }
 
 </style>
@@ -241,225 +32,44 @@ border-radius:20px;
 </head>
 
 <body>
-
-<div class="app">
-
-<!-- TOP -->
-
-<div class="topbar">
-
-<div class="logo">
-EXNACODE
-</div>
-
-<div class="actions">
-
-<button onclick="runCode()">
-Executar
-</button>
-
-<button onclick="copyCode()">
-Copiar
-</button>
-
-<button onclick="toggleFullscreen()">
-Tela Cheia
-</button>
-
-</div>
-
-</div>
-
-<!-- MAIN -->
-
-<div class="main">
-
-<!-- SIDEBAR -->
-
-<div class="sidebar">
-
-<h2>ARQUIVOS</h2>
-
-<div class="file active">
-index.html
-</div>
-
-<div class="file">
-style.css
-</div>
-
-<div class="file">
-script.js
-</div>
-
-</div>
-
-<!-- WORKSPACE -->
-
-<div class="workspace">
-
-<!-- TABS -->
-
-<div class="tabs">
-
-<div class="tab active">
-index.html
-</div>
-
-<div class="tab">
-style.css
-</div>
-
-<div class="tab">
-script.js
-</div>
-
-</div>
-
-<!-- SPLIT -->
-
-<div class="split">
-
-<!-- EDITOR -->
-
-<div class="editor-pane">
-
-<textarea id="editor">
-
-<!DOCTYPE html>
-
-<html>
-
-<head>
-
-<style>
-
-body{
-background:black;
-color:white;
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh;
-font-family:Arial;
-}
-
-h1{
-font-size:60px;
-}
-
-</style>
-
-</head>
-
-<body>
-
-<h1>Olá ExnaCode 🚀</h1>
-
-</body>
-
-</html>
-
-</textarea>
-
-</div>
-
-<!-- PREVIEW -->
-
-<div class="preview-pane">
 
 <iframe id="preview"></iframe>
 
-</div>
-
-</div>
-
-</div>
-
-</div>
-
-</div>
-
 <script>
-
-/* ELEMENTOS */
-
-const editor =
-document.getElementById("editor");
 
 const preview =
 document.getElementById("preview");
 
-/* AUTO LOAD */
+function updatePreview(){
 
-if(localStorage.getItem("exnacode")){
-editor.value =
+const code =
 localStorage.getItem("exnacode");
-}
 
-/* EXECUTAR */
-
-function runCode(){
-
-preview.srcdoc =
-editor.value;
-
-localStorage.setItem(
-"exnacode",
-editor.value
-);
-
-}
-
-/* AUTO UPDATE */
-
-editor.addEventListener(
-"input",
-()=>{
-
-preview.srcdoc =
-editor.value;
-
-localStorage.setItem(
-"exnacode",
-editor.value
-);
-
-}
-);
-
-/* COPY */
-
-function copyCode(){
-
-navigator.clipboard.writeText(
-editor.value
-);
-
-alert("Código copiado!");
-
-}
-
-/* FULLSCREEN */
-
-function toggleFullscreen(){
-
-if(!document.fullscreenElement){
-
-document.documentElement
-.requestFullscreen();
-
-}else{
-
-document.exitFullscreen();
-
-}
+preview.srcdoc = code;
 
 }
 
 /* START */
 
-runCode();
+updatePreview();
+
+/* LIVE UPDATE */
+
+window.addEventListener(
+"storage",
+()=>{
+
+updatePreview();
+
+}
+);
+
+/* AUTO REFRESH */
+
+setInterval(
+updatePreview,
+500
+);
 
 </script>
 
